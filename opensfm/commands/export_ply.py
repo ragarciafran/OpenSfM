@@ -1,5 +1,6 @@
 import logging
 import os
+import os
 
 import numpy as np
 
@@ -27,15 +28,27 @@ class Command:
                             action='store_true',
                             default=False,
                             help='Export per-image depthmaps as pointclouds')
+        parser.add_argument('--all', 
+                            action='store_true',
+                            default=False,
+                            help='Make separate reconstruction files for all partial reconstructions')
 
     def run(self, args):
         data = dataset.DataSet(args.dataset)
         reconstructions = data.load_reconstruction()
         no_cameras = args.no_cameras
         no_points = args.no_points
+        _all = args.all
+        path_all = args.dataset + "/reconstruction_files/"
 
-        if reconstructions:
+        if reconstructions and not _all:
             data.save_ply(reconstructions[0], None, no_cameras, no_points)
+
+        elif reconstructions and _all:
+            if not os.path.isdir(path_all):
+                os.mkdir(path_all)
+            for r in range(len(reconstructions)):
+                data.save_ply(reconstructions[r], "reconstruction_files/reconstruction_" + str(r) + ".ply", no_cameras, no_points)
 
         if args.depthmaps and reconstructions:
             udata = dataset.UndistortedDataSet(data, 'undistorted')

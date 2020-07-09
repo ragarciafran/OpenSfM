@@ -27,9 +27,6 @@ from opensfm import pysfm
 from opensfm.align import align_reconstruction, apply_similarity
 from opensfm.context import parallel_map, current_memory_usage
 
-# Added for plane fitting
-import open3d as o3d
-
 
 logger = logging.getLogger(__name__)
 
@@ -145,23 +142,6 @@ def bundle(graph, reconstruction, camera_priors, gcp, config):
         if config['align_orientation_prior'] == 'horizontal':
             for shot_id in reconstruction.shots:
                 ba.add_absolute_up_vector(shot_id, [0, -1, 0], 1e-3)
-        # added for aerial images
-        if config['align_orientation_prior']  == 'plane_based':
-            pcd = o3d.geometry.PointCloud()
-            pcd.points = o3d.utility.Vector3dVector(np.array([point.coordinates for point in reconstruction.points.values()]))
-            plane_model, _ = pcd.segment_plane(distance_threshold=1,
-                                                ransac_n=3,
-                                                num_iterations=1000)
-            up_vector = plane_model[:3]*np.sign(plane_model[2])
-            up_vector = up_vector.reshape((3, 1))
-            # if len(reconstruction.shots.values()) == 2:
-            #     up_vector = -up_vector
-            print("Bundle: ", up_vector)
-            for shot_id in reconstruction.shots:
-                shot = reconstruction.shots[shot_id]
-                R = shot.pose.get_rotation_matrix()
-                # print(R)
-                ba.add_absolute_up_vector(shot_id, R @ up_vector, 1e-3)
 
     ba.set_point_projection_loss_function(config['loss_function'],
                                           config['loss_function_threshold'])

@@ -34,7 +34,10 @@ def gps_to_decimal(values, reference):
     degrees = eval_frac(values[0])
     minutes = eval_frac(values[1])
     seconds = eval_frac(values[2])
-    return sign * (degrees + minutes / 60 + seconds / 3600)
+    try:
+        return sign * (degrees + minutes / 60 + seconds / 3600)
+    except TypeError:
+        return None
 
 
 def get_tag_as_float(tags, key, index=0):

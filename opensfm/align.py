@@ -9,6 +9,9 @@ from opensfm import pygeometry
 from opensfm import multiview
 from opensfm import transformations as tf
 
+# Added for plane fitting
+import open3d as o3d
+
 logger = logging.getLogger(__name__)
 
 
@@ -166,6 +169,7 @@ def align_reconstruction_orientation_prior_similarity(reconstruction, config, gc
      - no_roll: assumes horizon is horizontal on the images
      - horizontal: assumes cameras are looking towards the horizon
      - vertical: assumes cameras are looking down towards the ground
+     - plane_based: assumes the plane made by the points denote the up vector
     """
     X, Xp = alignment_constraints(config, reconstruction, gcp)
     X = np.array(X)
@@ -215,9 +219,24 @@ def estimate_ground_plane(reconstruction, config):
     It assumes cameras are all at a similar height and uses the
     align_orientation_prior option to enforce cameras to look
     horizontally or vertically.
-    """
+    """    
     orientation_type = config['align_orientation_prior']
     onplane, verticals = [], []
+    # added to realign the reconstruction
+    if orientation_type == 'plane_based':
+        pcd = o3d.geometry.PointCloud()
+        pcd.points = o3d.utility.Vector3dVector(np.array([point.coordinates for point in reconstruction.points.values()]))
+        plane_model, _ = pcd.segment_plane(distance_threshold=1,
+                                            ransac_n=3,
+                                            num_iterations=1000)
+        plane_model *= -np.sign(plane_model[2])
+        plane_model[3] = 0
+        print("Align: ", plane_model)
+        return plane_model
+        # up_vector = plane_model[:3]*np.sign(plane_model[2])
+        # if len(reconstruction.shots.values()) == 2:
+        #     up_vector = -up_vector
+        # print("Align: ", up_vector)
     for shot in reconstruction.shots.values():
         R = shot.pose.get_rotation_matrix()
         x, y, z = get_horizontal_and_vertical_directions(
@@ -241,6 +260,7 @@ def estimate_ground_plane(reconstruction, config):
     ground_points -= ground_points.mean(axis=0)
     
     plane = multiview.fit_plane(ground_points, onplane, verticals)
+    print("Align plane: ", plane)
     return plane
     
 
