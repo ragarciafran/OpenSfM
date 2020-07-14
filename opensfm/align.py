@@ -181,7 +181,6 @@ def align_reconstruction_orientation_prior_similarity(reconstruction, config, gc
     p = estimate_ground_plane(reconstruction, config)
     Rplane = multiview.plane_horizontalling_rotation(p)
     X = Rplane.dot(X.T).T
-
     # Estimate 2d similarity to align to GPS
     two_shots = len(X) == 2
     single_shot = len(X) < 2
@@ -229,14 +228,23 @@ def estimate_ground_plane(reconstruction, config):
         plane_model, _ = pcd.segment_plane(distance_threshold=1,
                                             ransac_n=3,
                                             num_iterations=1000)
-        plane_model *= -np.sign(plane_model[2])
-        plane_model[3] = 0
-        print("Align: ", plane_model)
-        return plane_model
-        # up_vector = plane_model[:3]*np.sign(plane_model[2])
-        # if len(reconstruction.shots.values()) == 2:
-        #     up_vector = -up_vector
-        # print("Align: ", up_vector)
+
+        # we assume the ground is flat enough that the normal is
+        # the up vector. the normal has to be in the direction of the 
+        # "ground_points"
+        ground_points = []
+        for shot in reconstruction.shots.values():
+            ground_points.append(shot.pose.get_origin())
+        ones_col = np.ones((len(ground_points), 1))
+        ground_points = np.array(ground_points)
+        ground_points = np.hstack((ground_points, ones_col))
+        signs = np.sum(np.sign(ground_points @ plane_model.reshape((4, 1))))
+
+        if signs > 0 :
+            return plane_model
+        else:
+            return -plane_model
+
     for shot in reconstruction.shots.values():
         R = shot.pose.get_rotation_matrix()
         x, y, z = get_horizontal_and_vertical_directions(
@@ -260,7 +268,6 @@ def estimate_ground_plane(reconstruction, config):
     ground_points -= ground_points.mean(axis=0)
     
     plane = multiview.fit_plane(ground_points, onplane, verticals)
-    print("Align plane: ", plane)
     return plane
     
 

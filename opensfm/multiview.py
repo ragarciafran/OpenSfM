@@ -358,6 +358,7 @@ def plane_horizontalling_rotation(p):
     v1 = [0.0, 0.0, 1.0]
     angle = tf.angle_between_vectors(v0, v1)
     axis = tf.vector_product(v0, v1)
+
     if np.linalg.norm(axis) > 0:
         return tf.rotation_matrix(angle, axis)[:3, :3]
     elif angle < 1.0:

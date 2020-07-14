@@ -105,7 +105,7 @@ def bundle(graph, reconstruction, camera_priors, gcp, config):
 
     chrono = Chronometer()
     ba = pybundle.BundleAdjuster()
-    ba.set_use_analytic_derivatives(use_analytic_derivatives)
+    # ba.set_use_analytic_derivatives(use_analytic_derivatives)
 
     for camera in reconstruction.cameras.values():
         camera_prior = camera_priors[camera.id]
@@ -149,21 +149,21 @@ def bundle(graph, reconstruction, camera_priors, gcp, config):
                 ba.add_absolute_up_vector(shot_id, [0, -1, 0], 1e-3)
         # added for aerial images
         if config['align_orientation_prior']  == 'plane_based':
-            pcd = o3d.geometry.PointCloud()
-            pcd.points = o3d.utility.Vector3dVector(np.array([point.coordinates for point in reconstruction.points.values()]))
-            plane_model, _ = pcd.segment_plane(distance_threshold=1,
-                                                ransac_n=3,
-                                                num_iterations=1000)
-            up_vector = plane_model[:3]*np.sign(plane_model[2])
-            up_vector = up_vector.reshape((3, 1))
+            pass
+            # TODO: ADD THE UP VECTORS TO THE BUNDLE ADJUSTMENT
+            # pcd = o3d.geometry.PointCloud()
+            # pcd.points = o3d.utility.Vector3dVector(np.array([point.coordinates for point in reconstruction.points.values()]))
+            # plane_model, _ = pcd.segment_plane(distance_threshold=1,
+            #                                     ransac_n=3,
+            #                                     num_iterations=1000)
+            # up_vector = plane_model[:3]*np.sign(plane_model[2])
+            # up_vector = up_vector.reshape((3, 1))
             # if len(reconstruction.shots.values()) == 2:
             #     up_vector = -up_vector
-            print("Bundle: ", up_vector)
-            for shot_id in reconstruction.shots:
-                shot = reconstruction.shots[shot_id]
-                R = shot.pose.get_rotation_matrix()
-                # print(R)
-                ba.add_absolute_up_vector(shot_id, R @ up_vector, 1e-3)
+            # for shot_id in reconstruction.shots:
+            #     shot = reconstruction.shots[shot_id]
+            #     R = shot.pose.get_rotation_matrix()
+                # ba.add_absolute_up_vector(shot_id, R @ up_vector, 1e-3)
 
     ba.set_point_projection_loss_function(config['loss_function'],
                                           config['loss_function_threshold'])
@@ -209,7 +209,7 @@ def bundle(graph, reconstruction, camera_priors, gcp, config):
 def bundle_single_view(graph, reconstruction, shot_id, camera_priors, config):
     """Bundle adjust a single camera."""
     ba = pybundle.BundleAdjuster()
-    ba.set_use_analytic_derivatives(config['bundle_analytic_derivatives'])
+    # ba.set_use_analytic_derivatives(config['bundle_analytic_derivatives'])
     shot = reconstruction.shots[shot_id]
     camera = shot.camera
     camera_prior = camera_priors[camera.id]
@@ -279,7 +279,7 @@ def bundle_local(graph, reconstruction, camera_priors, gcp, central_shot_id, con
                     point_ids.add(track)
 
     ba = pybundle.BundleAdjuster()
-    ba.set_use_analytic_derivatives(config['bundle_analytic_derivatives'])
+    # ba.set_use_analytic_derivatives(config['bundle_analytic_derivatives'])
 
     for camera in reconstruction.cameras.values():
         camera_prior = camera_priors[camera.id]
