@@ -149,22 +149,14 @@ def bundle(graph, reconstruction, camera_priors, gcp, config):
                 ba.add_absolute_up_vector(shot_id, [0, -1, 0], 1e-3)
         # added for aerial images
         if config['align_orientation_prior']  == 'plane_based':
-            pass
-            # TODO: ADD THE UP VECTORS TO THE BUNDLE ADJUSTMENT
-            # pcd = o3d.geometry.PointCloud()
-            # pcd.points = o3d.utility.Vector3dVector(np.array([point.coordinates for point in reconstruction.points.values()]))
-            # plane_model, _ = pcd.segment_plane(distance_threshold=1,
-            #                                     ransac_n=3,
-            #                                     num_iterations=1000)
-            # up_vector = plane_model[:3]*np.sign(plane_model[2])
-            # up_vector = up_vector.reshape((3, 1))
-            # if len(reconstruction.shots.values()) == 2:
-            #     up_vector = -up_vector
-            # for shot_id in reconstruction.shots:
-            #     shot = reconstruction.shots[shot_id]
-            #     R = shot.pose.get_rotation_matrix()
-                # ba.add_absolute_up_vector(shot_id, R @ up_vector, 1e-3)
-
+            ground_plane = align.estimate_ground_plane(reconstruction, config)
+            for shot_id in reconstruction.shots:
+                shot = reconstruction.shots[shot_id]
+                rotation = shot.pose.rotation
+                R, _ = cv2.Rodrigues(rotation)
+                up_vector = R @ ground_plane[:3]/np.linalg.norm(ground_plane[:3])
+                ba.add_absolute_up_vector(shot_id, up_vector, 1e-3)
+            
     ba.set_point_projection_loss_function(config['loss_function'],
                                           config['loss_function_threshold'])
     ba.set_internal_parameters_prior_sd(

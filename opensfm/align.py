@@ -221,29 +221,19 @@ def estimate_ground_plane(reconstruction, config):
     """    
     orientation_type = config['align_orientation_prior']
     onplane, verticals = [], []
-    # added to realign the reconstruction
+
     if orientation_type == 'plane_based':
-        pcd = o3d.geometry.PointCloud()
-        pcd.points = o3d.utility.Vector3dVector(np.array([point.coordinates for point in reconstruction.points.values()]))
-        plane_model, _ = pcd.segment_plane(distance_threshold=1,
-                                            ransac_n=3,
-                                            num_iterations=1000)
-
-        # we assume the ground is flat enough that the normal is
-        # the up vector. the normal has to be in the direction of the 
-        # "ground_points"
-        ground_points = []
         for shot in reconstruction.shots.values():
-            ground_points.append(shot.pose.get_origin())
-        ones_col = np.ones((len(ground_points), 1))
-        ground_points = np.array(ground_points)
-        ground_points = np.hstack((ground_points, ones_col))
-        signs = np.sum(np.sign(ground_points @ plane_model.reshape((4, 1))))
+            R = shot.pose.get_rotation_matrix()
+            x, y, z = get_horizontal_and_vertical_directions(
+                R, shot.metadata.orientation)
+            verticals.append(-z)
 
-        if signs > 0 :
-            return plane_model
-        else:
-            return -plane_model
+        ground_points = np.array([point.coordinates for point in reconstruction.points.values()])
+        ground_points -= ground_points.mean(axis=0)
+        
+        plane = multiview.fit_plane(ground_points, onplane, verticals)
+        return plane
 
     for shot in reconstruction.shots.values():
         R = shot.pose.get_rotation_matrix()
