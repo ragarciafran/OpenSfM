@@ -115,7 +115,7 @@ class MetaDataSet():
             clusters=clusters)
 
     def load_clusters_with_neighbors(self):
-        c = np.load(self._clusters_with_neighbors_path())
+        c = np.load(self._clusters_with_neighbors_path(), allow_pickle=True)
         return c['clusters']
 
     def save_cluster_with_neighbors_geojson(self, geojson):

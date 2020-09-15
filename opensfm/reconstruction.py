@@ -155,7 +155,8 @@ def bundle(graph, reconstruction, camera_priors, gcp, config):
                 rotation = shot.pose.rotation
                 R, _ = cv2.Rodrigues(rotation)
                 up_vector = R @ ground_plane[:3]/np.linalg.norm(ground_plane[:3])
-                ba.add_absolute_up_vector(shot_id, up_vector, 1e-3)
+                # Making the third argument larger enforces the up direction less strictly
+                ba.add_absolute_up_vector(shot_id, up_vector, 1e-1)
             
     ba.set_point_projection_loss_function(config['loss_function'],
                                           config['loss_function_threshold'])
