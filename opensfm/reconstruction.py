@@ -156,7 +156,7 @@ def bundle(graph, reconstruction, camera_priors, gcp, config):
                 R, _ = cv2.Rodrigues(rotation)
                 up_vector = R @ ground_plane[:3]/np.linalg.norm(ground_plane[:3])
                 # Making the third argument larger enforces the up direction less strictly
-                ba.add_absolute_up_vector(shot_id, up_vector, 1e-1)
+                ba.add_absolute_up_vector(shot_id, up_vector, 1e-2)
             
     ba.set_point_projection_loss_function(config['loss_function'],
                                           config['loss_function_threshold'])
@@ -538,7 +538,9 @@ def two_view_reconstruction_plane_based(p1, p2, camera1, camera2, threshold):
         motion_inliers.append(inliers)
 
     # TODO: FIGURE OUT HOW TO HANDLE MULTIPLE SOLUTIONS
-    # print(list(map(len, motion_inliers)))
+    # sorted_inliers = np.sort(list(map(len, motion_inliers)))
+    # if sorted_inliers[-1]*.95 < sorted_inliers[-2]:
+    #     return None, None, []
 
     best = np.argmax(map(len, motion_inliers))
     R, t, n, d = motions[best]
@@ -607,7 +609,7 @@ def two_view_reconstruction_rotation_only(p1, p2, camera1, camera2, threshold):
 
 
 def two_view_reconstruction_general(p1, p2, camera1, camera2,
-                                    threshold, iterations):
+                                    threshold, iterations, method=None):
     """Reconstruct two views from point correspondences.
 
     These will try different reconstruction methods and return the
@@ -621,8 +623,15 @@ def two_view_reconstruction_general(p1, p2, camera1, camera2,
     Returns:
         rotation, translation and inlier list
     """
+    # if not method == "plane_based":
+    #     R_5p, t_5p, inliers_5p = two_view_reconstruction(
+    #         p1, p2, camera1, camera2, threshold, iterations)
+    
+    # else: 
+    #     R_5p, t_5p, inliers_5p = [], [], []
     R_5p, t_5p, inliers_5p = two_view_reconstruction(
         p1, p2, camera1, camera2, threshold, iterations)
+
 
     R_plane, t_plane, inliers_plane = two_view_reconstruction_plane_based(
         p1, p2, camera1, camera2, threshold)
@@ -634,9 +643,11 @@ def two_view_reconstruction_general(p1, p2, camera1, camera2,
 
     if len(inliers_5p) > len(inliers_plane):
         report['method'] = '5_point'
+        print('5_point')
         return R_5p, t_5p, inliers_5p, report
     else:
         report['method'] = 'plane_based'
+        print('plane_based')
         return R_plane, t_plane, inliers_plane, report
 
 
@@ -656,9 +667,10 @@ def bootstrap_reconstruction(data, tracks_manager, camera_priors, im1, im2, p1, 
     threshold = data.config['five_point_algo_threshold']
     min_inliers = data.config['five_point_algo_min_inliers']
     iterations = data.config['five_point_refine_rec_iterations']
+    method = data.config['align_orientation_prior']
     R, t, inliers, report['two_view_reconstruction'] = \
         two_view_reconstruction_general(
-            p1, p2, camera1, camera2, threshold, iterations)
+            p1, p2, camera1, camera2, threshold, iterations, method=method)
 
     logger.info("Two-view reconstruction inliers: {} / {}".format(
         len(inliers), len(p1)))
